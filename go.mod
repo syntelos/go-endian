@@ -1,4 +1,4 @@
-module github.com/syntelos/go-endian/v1
+module github.com/syntelos/go-endian/v0
 
 go 1.20
 
