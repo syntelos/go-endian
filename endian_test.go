@@ -13,35 +13,74 @@ import (
 	"fmt"
 	"testing"
 )
-
+/*
+ * Integrity
+ */
 func TestOrder(t *testing.T){
 
 	fmt.Printf("Host byte order: %s\n",HostOrder)
 }
-func TestRandom(t *testing.T){
-	var e error
+/*
+ * Consistency
+ */
+func TestRandomPyramid(t *testing.T){
+	var sequence uint8
+	var count uint8
+	for count = 2; count <= 8; count += 2 {
 
-	var vector16 uint16
-	vector16, e = Rand16()
-	if nil != e {
-		t.Error(e)
-	} else {
-		fmt.Printf("Random [16]: 0x%04x\n",vector16)
-	}
+		for sequence = 1; sequence <= 16; sequence++ {
 
-	var vector32 uint32
-	vector32, e = Rand32()
-	if nil != e {
-		t.Error(e)
-	} else {
-		fmt.Printf("Random [32]: 0x%08x\n",vector32)
-	}
+			var er error
 
-	var vector64 uint64
-	vector64, e = Rand64()
-	if nil != e {
-		t.Error(e)
-	} else {
-		fmt.Printf("Random [64]: 0x%016x\n",vector64)
+			switch count {
+			case 2:
+				var value uint16
+				value, er = Rand16()
+
+				if nil != er {
+					t.Errorf("Test pyramid random: %v",er)
+				} else {
+					var vector []byte = make([]byte,2)
+					HostOrder.EncodeUint16(vector,value)
+
+					var check uint16 = HostOrder.DecodeUint16(vector)
+					if check != value {
+						t.Errorf("Test pyramid random check (0x%x) != value (0x%x)",check,value)
+					}
+				}
+
+			case 4:
+				var value uint32
+				value, er = Rand32()
+
+				if nil != er {
+					t.Errorf("test pyramid random: %v",er)
+				} else {
+					var vector []byte = make([]byte,4)
+					HostOrder.EncodeUint32(vector,value)
+
+					var check uint32 = HostOrder.DecodeUint32(vector)
+					if check != value {
+						t.Errorf("Test pyramid random check (0x%x) != value (0x%x)",check,value)
+					}
+				}
+
+			case 8:
+				var value uint64
+				value, er = Rand64()
+
+				if nil != er {
+					t.Errorf("Test pyramid random: %v",er)
+				} else {
+					var vector []byte = make([]byte,8)
+					HostOrder.EncodeUint64(vector,value)
+
+					var check uint64 = HostOrder.DecodeUint64(vector)
+					if check != value {
+						t.Errorf("Test pyramid random check (0x%x) != value (0x%x)",check,value)
+					}
+				}
+			}
+		}
 	}
 }

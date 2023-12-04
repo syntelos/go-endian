@@ -18,6 +18,7 @@ package endian
 import (
 	"fmt"
 	"io"
+	"golang.org/x/sys/cpu"
 )
 /*
  * Byte order type abstraction to support host byte order.
@@ -78,24 +79,13 @@ var HostOrder ByteOrder = hostByteOrder()
  */
 func hostByteOrder() (ByteOrder) {
 
-	var hbo ByteOrder
-	{
-		const check uint16 = 0x00FF
-		var vector []byte = make([]byte,2)
+	if cpu.IsBigEndian {
 
-		BigEndian.EncodeUint16(vector,check)
+		return BigEndian
+	} else {
 
-		var value uint16 = BigEndian.DecodeUint16(vector)
-
-		if check == value {
-
-			return BigEndian
-		} else {
-
-			return LilEndian
-		}
+		return LilEndian
 	}
-	return hbo
 }
 /*
  */
