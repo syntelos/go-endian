@@ -3,8 +3,14 @@
  * Copyright 2023 John Douglas Pritchard, Syntelos
  *
  *
+ * Implements host byte order determination as one of two
+ * principals: large or small.  N.B. Ancient alternatives
+ * from antiquity are ignored.
+ *
+ * 
  * References
  *
+ * https://en.wikipedia.org/wiki/Endianness
  * https://pkg.go.dev/encoding/binary
  */
 package endian
@@ -14,20 +20,25 @@ import (
 	"io"
 )
 /*
+ * Byte order type abstraction to support host byte order.
+ * N.B. Block operations do not check array object
+ * boundaries.
  */
 type ByteOrder interface {
+	/*
+	 * Block
+	 */
+	EncodeUint16([]byte, uint16)
+	DecodeUint16([]byte) (uint16)
 
+	EncodeUint32([]byte, uint32)
+	DecodeUint32([]byte) (uint32)
 
-	EncodeUint16([2]byte, uint16)
-	DecodeUint16([2]byte) (uint16)
-
-	EncodeUint32([4]byte, uint32)
-	DecodeUint32([4]byte) (uint32)
-
-	EncodeUint64([8]byte, uint64)
-	DecodeUint64([8]byte) (uint64)
-
-
+	EncodeUint64([]byte, uint64)
+	DecodeUint64([]byte) (uint64)
+	/*
+	 * Stream
+	 */
 	WriteUint16(io.Writer, uint16) (int, error)
 	ReadUint16(io.ByteReader) (uint16, error)
 
@@ -36,10 +47,14 @@ type ByteOrder interface {
 
 	WriteUint64(io.Writer, uint64) (int, error)
 	ReadUint64(io.ByteReader) (uint64, error)
-
+	/*
+	 * User
+	 */
 	String() (string)
+
 }
 /*
+ * Abstractions
  */
 type ByteOrderSmall struct{}
 
@@ -49,20 +64,24 @@ const ByteOrderSmallName string = "little-endian"
 
 const ByteOrderLargeName string = "big-endian"
 /*
+ * Practicals
  */
 var LilEndian ByteOrderSmall
 
 var BigEndian ByteOrderLarge
 
-var HostOrder ByteOrder = HostByteOrder()
+var HostOrder ByteOrder = hostByteOrder()
 /*
+ * Determines host byte order as one of two principals
+ * (large or small).  N.B. Ancient alternatives from
+ * antiquity are ignored.
  */
-func HostByteOrder() (ByteOrder) {
+func hostByteOrder() (ByteOrder) {
 
 	var hbo ByteOrder
 	{
 		const check uint16 = 0x00FF
-		var vector [2]byte
+		var vector []byte = make([]byte,2)
 
 		BigEndian.EncodeUint16(vector,check)
 
@@ -80,14 +99,14 @@ func HostByteOrder() (ByteOrder) {
 }
 /*
  */
-func (ByteOrderSmall) EncodeUint16(w [2]byte, v uint16){
+func (ByteOrderSmall) EncodeUint16(w []byte, v uint16){
 	var a byte = byte(v & 0xFF)
 	var b byte = byte((v >> 8) & 0xFF)
 
 	w[0] = a
 	w[1] = b
 }
-func (ByteOrderSmall) DecodeUint16(r [2]byte) (v uint16){
+func (ByteOrderSmall) DecodeUint16(r []byte) (v uint16){
 	var a, b byte
 
 	a = r[0]
@@ -97,7 +116,7 @@ func (ByteOrderSmall) DecodeUint16(r [2]byte) (v uint16){
 	v = ((b16 << 8) | a16)
 	return v
 }
-func (ByteOrderSmall) EncodeUint32(w [4]byte, v uint32){
+func (ByteOrderSmall) EncodeUint32(w []byte, v uint32){
 	var a byte = byte(v & 0xFF)
 	var b byte = byte((v >>  8) & 0xFF)
 	var c byte = byte((v >> 16) & 0xFF)
@@ -108,7 +127,7 @@ func (ByteOrderSmall) EncodeUint32(w [4]byte, v uint32){
 	w[2] = c
 	w[3] = d
 }
-func (ByteOrderSmall) DecodeUint32(r [4]byte) (v uint32){
+func (ByteOrderSmall) DecodeUint32(r []byte) (v uint32){
 	var a, b, c, d byte
 
 	a = r[0]
@@ -120,7 +139,7 @@ func (ByteOrderSmall) DecodeUint32(r [4]byte) (v uint32){
 	v = ((d32 << 24) | (c32 << 16) | (b32 << 8) | a32)
 	return v
 }
-func (ByteOrderSmall) EncodeUint64(w [8]byte, v uint64){
+func (ByteOrderSmall) EncodeUint64(w []byte, v uint64){
 	var a byte = byte(v & 0xFF)
 	var b byte = byte((v >>  8) & 0xFF)
 	var c byte = byte((v >> 16) & 0xFF)
@@ -140,7 +159,7 @@ func (ByteOrderSmall) EncodeUint64(w [8]byte, v uint64){
 	w[6] = g
 	w[7] = h
 }
-func (ByteOrderSmall) DecodeUint64(r [8]byte) (v uint64){
+func (ByteOrderSmall) DecodeUint64(r []byte) (v uint64){
 	var a, b, c, d, e, f, g, h byte
 
 	a = r[0]
@@ -174,12 +193,12 @@ func (ByteOrderSmall) ReadUint16(r io.ByteReader) (v uint16, e error){
 
 	a, e = r.ReadByte()
 	if nil != e {
-		fmt.Errorf("ReadUint16 [0]: %w",e)
+		e = fmt.Errorf("ReadUint16 [0]: %w",e)
 		return v, e
 	} else {
 		b, e = r.ReadByte()
 		if nil != e {
-			fmt.Errorf("ReadUint16 [1]: %w",e)
+			e = fmt.Errorf("ReadUint16 [1]: %w",e)
 			return v, e
 		} else {
 			var a16, b16 uint16 = uint16(a), uint16(b)
@@ -210,22 +229,22 @@ func (ByteOrderSmall) ReadUint32(r io.ByteReader) (v uint32, e error){
 
 	a, e = r.ReadByte()
 	if nil != e {
-		fmt.Errorf("ReadUint32 [0]: %w",e)
+		e = fmt.Errorf("ReadUint32 [0]: %w",e)
 		return v, e
 	} else {
 		b, e = r.ReadByte()
 		if nil != e {
-			fmt.Errorf("ReadUint32 [1]: %w",e)
+			e = fmt.Errorf("ReadUint32 [1]: %w",e)
 			return v, e
 		} else {
 			c, e = r.ReadByte()
 			if nil != e {
-				fmt.Errorf("ReadUint32 [1]: %w",e)
+				e = fmt.Errorf("ReadUint32 [2]: %w",e)
 				return v, e
 			} else {
 				d, e = r.ReadByte()
 				if nil != e {
-					fmt.Errorf("ReadUint32 [1]: %w",e)
+					e = fmt.Errorf("ReadUint32 [3]: %w",e)
 					return v, e
 				} else {
 					var d32, c32, b32, a32 uint32 = uint32(d), uint32(c), uint32(b), uint32(a)
@@ -267,42 +286,42 @@ func (ByteOrderSmall) ReadUint64(r io.ByteReader) (v uint64, e error){
 
 	a, e = r.ReadByte()
 	if nil != e {
-		fmt.Errorf("ReadUint64 [0]: %w",e)
+		e = fmt.Errorf("ReadUint64 [0]: %w",e)
 		return v, e
 	} else {
 		b, e = r.ReadByte()
 		if nil != e {
-			fmt.Errorf("ReadUint64 [1]: %w",e)
+			e = fmt.Errorf("ReadUint64 [1]: %w",e)
 			return v, e
 		} else {
 			c, e = r.ReadByte()
 			if nil != e {
-				fmt.Errorf("ReadUint64 [1]: %w",e)
+				e = fmt.Errorf("ReadUint64 [2]: %w",e)
 				return v, e
 			} else {
 				d, e = r.ReadByte()
 				if nil != e {
-					fmt.Errorf("ReadUint64 [1]: %w",e)
+					e = fmt.Errorf("ReadUint64 [3]: %w",e)
 					return v, e
 				} else {
 					f, e = r.ReadByte()
 					if nil != e {
-						fmt.Errorf("ReadUint64 [0]: %w",e)
+						e = fmt.Errorf("ReadUint64 [4]: %w",e)
 						return v, e
 					} else {
 						g, e = r.ReadByte()
 						if nil != e {
-							fmt.Errorf("ReadUint64 [1]: %w",e)
+							e = fmt.Errorf("ReadUint64 [5]: %w",e)
 							return v, e
 						} else {
 							h, e = r.ReadByte()
 							if nil != e {
-								fmt.Errorf("ReadUint64 [1]: %w",e)
+								e = fmt.Errorf("ReadUint64 [6]: %w",e)
 								return v, e
 							} else {
 								i, e = r.ReadByte()
 								if nil != e {
-									fmt.Errorf("ReadUint64 [1]: %w",e)
+									e = fmt.Errorf("ReadUint64 [7]: %w",e)
 									return v, e
 								} else {
 									var i64, h64, g64, f64, d64, c64, b64, a64 = uint64(i), uint64(h), uint64(g), uint64(f), uint64(d), uint64(c), uint64(b), uint64(a)
@@ -322,14 +341,14 @@ func (ByteOrderLarge) String() (string) {
 }
 /*
  */
-func (ByteOrderLarge) EncodeUint16(w [2]byte, v uint16){
+func (ByteOrderLarge) EncodeUint16(w []byte, v uint16){
 	var a byte = byte((v >> 8) & 0xFF)
 	var b byte = byte(v & 0xFF)
 
 	w[0] = a
 	w[1] = b
 }
-func (ByteOrderLarge) DecodeUint16(r [2]byte) (v uint16){
+func (ByteOrderLarge) DecodeUint16(r []byte) (v uint16){
 	var a, b byte
 
 	a = r[0]
@@ -339,7 +358,7 @@ func (ByteOrderLarge) DecodeUint16(r [2]byte) (v uint16){
 	v = ((a16 << 8) | b16)
 	return v
 }
-func (ByteOrderLarge) EncodeUint32(w [4]byte, v uint32){
+func (ByteOrderLarge) EncodeUint32(w []byte, v uint32){
 	var a byte = byte((v >> 24) & 0xFF)
 	var b byte = byte((v >> 16) & 0xFF)
 	var c byte = byte((v >>  8) & 0xFF)
@@ -350,7 +369,7 @@ func (ByteOrderLarge) EncodeUint32(w [4]byte, v uint32){
 	w[2] = c
 	w[3] = d
 }
-func (ByteOrderLarge) DecodeUint32(r [4]byte) (v uint32){
+func (ByteOrderLarge) DecodeUint32(r []byte) (v uint32){
 	var a, b, c, d byte
 
 	a = r[0]
@@ -362,7 +381,7 @@ func (ByteOrderLarge) DecodeUint32(r [4]byte) (v uint32){
 	v = ((a32 << 24) | (b32 << 16) | (c32 << 8) | d32)
 	return v
 }
-func (ByteOrderLarge) EncodeUint64(w [8]byte, v uint64){
+func (ByteOrderLarge) EncodeUint64(w []byte, v uint64){
 	var a byte = byte((v >> 56) & 0xFF)
 	var b byte = byte((v >> 48) & 0xFF)
 	var c byte = byte((v >> 40) & 0xFF)
@@ -382,7 +401,7 @@ func (ByteOrderLarge) EncodeUint64(w [8]byte, v uint64){
 	w[6] = g
 	w[7] = h
 }
-func (ByteOrderLarge) DecodeUint64(r [8]byte) (v uint64){
+func (ByteOrderLarge) DecodeUint64(r []byte) (v uint64){
 	var a, b, c, d, e, f, g, h byte
 
 	a = r[0]
@@ -416,12 +435,12 @@ func (ByteOrderLarge) ReadUint16(r io.ByteReader) (v uint16, e error){
 
 	a, e = r.ReadByte()
 	if nil != e {
-		fmt.Errorf("ReadUint16 [0]: %w",e)
+		e = fmt.Errorf("ReadUint16 [0]: %w",e)
 		return v, e
 	} else {
 		b, e = r.ReadByte()
 		if nil != e {
-			fmt.Errorf("ReadUint16 [1]: %w",e)
+			e = fmt.Errorf("ReadUint16 [1]: %w",e)
 			return v, e
 		} else {
 			var a16, b16 uint16 = uint16(a), uint16(b)
@@ -452,22 +471,22 @@ func (ByteOrderLarge) ReadUint32(r io.ByteReader) (v uint32, e error){
 
 	a, e = r.ReadByte()
 	if nil != e {
-		fmt.Errorf("ReadUint32 [0]: %w",e)
+		e = fmt.Errorf("ReadUint32 [0]: %w",e)
 		return v, e
 	} else {
 		b, e = r.ReadByte()
 		if nil != e {
-			fmt.Errorf("ReadUint32 [1]: %w",e)
+			e = fmt.Errorf("ReadUint32 [1]: %w",e)
 			return v, e
 		} else {
 			c, e = r.ReadByte()
 			if nil != e {
-				fmt.Errorf("ReadUint32 [1]: %w",e)
+				e = fmt.Errorf("ReadUint32 [2]: %w",e)
 				return v, e
 			} else {
 				d, e = r.ReadByte()
 				if nil != e {
-					fmt.Errorf("ReadUint32 [1]: %w",e)
+					e = fmt.Errorf("ReadUint32 [3]: %w",e)
 					return v, e
 				} else {
 					var a32, b32, c32, d32 uint32 = uint32(a), uint32(b), uint32(c), uint32(d)
@@ -509,42 +528,42 @@ func (ByteOrderLarge) ReadUint64(r io.ByteReader) (v uint64, e error){
 
 	a, e = r.ReadByte()
 	if nil != e {
-		fmt.Errorf("ReadUint64 [0]: %w",e)
+		e = fmt.Errorf("ReadUint64 [0]: %w",e)
 		return v, e
 	} else {
 		b, e = r.ReadByte()
 		if nil != e {
-			fmt.Errorf("ReadUint64 [1]: %w",e)
+			e = fmt.Errorf("ReadUint64 [1]: %w",e)
 			return v, e
 		} else {
 			c, e = r.ReadByte()
 			if nil != e {
-				fmt.Errorf("ReadUint64 [1]: %w",e)
+				e = fmt.Errorf("ReadUint64 [2]: %w",e)
 				return v, e
 			} else {
 				d, e = r.ReadByte()
 				if nil != e {
-					fmt.Errorf("ReadUint64 [1]: %w",e)
+					e = fmt.Errorf("ReadUint64 [3]: %w",e)
 					return v, e
 				} else {
 					f, e = r.ReadByte()
 					if nil != e {
-						fmt.Errorf("ReadUint64 [0]: %w",e)
+						e = fmt.Errorf("ReadUint64 [4]: %w",e)
 						return v, e
 					} else {
 						g, e = r.ReadByte()
 						if nil != e {
-							fmt.Errorf("ReadUint64 [1]: %w",e)
+							e = fmt.Errorf("ReadUint64 [5]: %w",e)
 							return v, e
 						} else {
 							h, e = r.ReadByte()
 							if nil != e {
-								fmt.Errorf("ReadUint64 [1]: %w",e)
+								e = fmt.Errorf("ReadUint64 [6]: %w",e)
 								return v, e
 							} else {
 								i, e = r.ReadByte()
 								if nil != e {
-									fmt.Errorf("ReadUint64 [1]: %w",e)
+									e = fmt.Errorf("ReadUint64 [7]: %w",e)
 									return v, e
 								} else {
 									var a64, b64, c64, d64, f64, g64, h64, i64 uint64 = uint64(a), uint64(b), uint64(c), uint64(d), uint64(f), uint64(g), uint64(h), uint64(i)
