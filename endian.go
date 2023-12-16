@@ -29,13 +29,13 @@ type ByteOrder interface {
 	/*
 	 * Block
 	 */
-	EncodeUint16([]byte, uint16)
+	EncodeUint16(uint16) ([]byte)
 	DecodeUint16([]byte) (uint16)
 
-	EncodeUint32([]byte, uint32)
+	EncodeUint32(uint32) ([]byte)
 	DecodeUint32([]byte) (uint32)
 
-	EncodeUint64([]byte, uint64)
+	EncodeUint64(uint64) ([]byte)
 	DecodeUint64([]byte) (uint64)
 	/*
 	 * Stream
@@ -89,12 +89,16 @@ func hostByteOrder() (ByteOrder) {
 }
 /*
  */
-func (ByteOrderSmall) EncodeUint16(w []byte, v uint16){
+func (ByteOrderSmall) EncodeUint16(v uint16) (w []byte) {
 	var a byte = byte(v & 0xFF)
 	var b byte = byte((v >> 8) & 0xFF)
 
+	w = make([]byte,2)
+
 	w[0] = a
 	w[1] = b
+
+	return w
 }
 func (ByteOrderSmall) DecodeUint16(r []byte) (v uint16){
 	var a, b byte
@@ -106,16 +110,20 @@ func (ByteOrderSmall) DecodeUint16(r []byte) (v uint16){
 	v = ((b16 << 8) | a16)
 	return v
 }
-func (ByteOrderSmall) EncodeUint32(w []byte, v uint32){
+func (ByteOrderSmall) EncodeUint32(v uint32) (w []byte) {
 	var a byte = byte(v & 0xFF)
 	var b byte = byte((v >>  8) & 0xFF)
 	var c byte = byte((v >> 16) & 0xFF)
 	var d byte = byte((v >> 24) & 0xFF)
 
+	w = make([]byte,4)
+
 	w[0] = a
 	w[1] = b
 	w[2] = c
 	w[3] = d
+
+	return w
 }
 func (ByteOrderSmall) DecodeUint32(r []byte) (v uint32){
 	var a, b, c, d byte
@@ -129,7 +137,7 @@ func (ByteOrderSmall) DecodeUint32(r []byte) (v uint32){
 	v = ((d32 << 24) | (c32 << 16) | (b32 << 8) | a32)
 	return v
 }
-func (ByteOrderSmall) EncodeUint64(w []byte, v uint64){
+func (ByteOrderSmall) EncodeUint64(v uint64) (w []byte) {
 	var a byte = byte(v & 0xFF)
 	var b byte = byte((v >>  8) & 0xFF)
 	var c byte = byte((v >> 16) & 0xFF)
@@ -140,6 +148,8 @@ func (ByteOrderSmall) EncodeUint64(w []byte, v uint64){
 	var g byte = byte((v >> 48) & 0xFF)
 	var h byte = byte((v >> 56) & 0xFF)
 
+	w = make([]byte,8)
+
 	w[0] = a
 	w[1] = b
 	w[2] = c
@@ -148,6 +158,8 @@ func (ByteOrderSmall) EncodeUint64(w []byte, v uint64){
 	w[5] = f
 	w[6] = g
 	w[7] = h
+
+	return w
 }
 func (ByteOrderSmall) DecodeUint64(r []byte) (v uint64){
 	var a, b, c, d, e, f, g, h byte
@@ -331,12 +343,16 @@ func (ByteOrderLarge) String() (string) {
 }
 /*
  */
-func (ByteOrderLarge) EncodeUint16(w []byte, v uint16){
+func (ByteOrderLarge) EncodeUint16(v uint16) (w []byte) {
 	var a byte = byte((v >> 8) & 0xFF)
 	var b byte = byte(v & 0xFF)
 
+	w = make([]byte,2)
+
 	w[0] = a
 	w[1] = b
+
+	return w
 }
 func (ByteOrderLarge) DecodeUint16(r []byte) (v uint16){
 	var a, b byte
@@ -348,16 +364,20 @@ func (ByteOrderLarge) DecodeUint16(r []byte) (v uint16){
 	v = ((a16 << 8) | b16)
 	return v
 }
-func (ByteOrderLarge) EncodeUint32(w []byte, v uint32){
+func (ByteOrderLarge) EncodeUint32(v uint32) (w []byte) {
 	var a byte = byte((v >> 24) & 0xFF)
 	var b byte = byte((v >> 16) & 0xFF)
 	var c byte = byte((v >>  8) & 0xFF)
 	var d byte = byte(v & 0xFF)
 
+	w = make([]byte,4)
+
 	w[0] = a
 	w[1] = b
 	w[2] = c
 	w[3] = d
+
+	return w
 }
 func (ByteOrderLarge) DecodeUint32(r []byte) (v uint32){
 	var a, b, c, d byte
@@ -371,7 +391,7 @@ func (ByteOrderLarge) DecodeUint32(r []byte) (v uint32){
 	v = ((a32 << 24) | (b32 << 16) | (c32 << 8) | d32)
 	return v
 }
-func (ByteOrderLarge) EncodeUint64(w []byte, v uint64){
+func (ByteOrderLarge) EncodeUint64(v uint64) (w []byte) {
 	var a byte = byte((v >> 56) & 0xFF)
 	var b byte = byte((v >> 48) & 0xFF)
 	var c byte = byte((v >> 40) & 0xFF)
@@ -382,6 +402,8 @@ func (ByteOrderLarge) EncodeUint64(w []byte, v uint64){
 	var g byte = byte((v >>  8) & 0xFF)
 	var h byte = byte(v & 0xFF)
 
+	w = make([]byte,8)
+
 	w[0] = a
 	w[1] = b
 	w[2] = c
@@ -390,6 +412,8 @@ func (ByteOrderLarge) EncodeUint64(w []byte, v uint64){
 	w[5] = f
 	w[6] = g
 	w[7] = h
+
+	return w
 }
 func (ByteOrderLarge) DecodeUint64(r []byte) (v uint64){
 	var a, b, c, d, e, f, g, h byte

@@ -40,8 +40,7 @@ func TestRandomPyramid(t *testing.T){
 				if nil != er {
 					t.Errorf("Test pyramid random: %v",er)
 				} else {
-					var vector []byte = make([]byte,2)
-					HostOrder.EncodeUint16(vector,value)
+					var vector []byte = HostOrder.EncodeUint16(value)
 
 					var check uint16 = HostOrder.DecodeUint16(vector)
 					if check != value {
@@ -56,8 +55,7 @@ func TestRandomPyramid(t *testing.T){
 				if nil != er {
 					t.Errorf("test pyramid random: %v",er)
 				} else {
-					var vector []byte = make([]byte,4)
-					HostOrder.EncodeUint32(vector,value)
+					var vector []byte = HostOrder.EncodeUint32(value)
 
 					var check uint32 = HostOrder.DecodeUint32(vector)
 					if check != value {
@@ -72,8 +70,7 @@ func TestRandomPyramid(t *testing.T){
 				if nil != er {
 					t.Errorf("Test pyramid random: %v",er)
 				} else {
-					var vector []byte = make([]byte,8)
-					HostOrder.EncodeUint64(vector,value)
+					var vector []byte = HostOrder.EncodeUint64(value)
 
 					var check uint64 = HostOrder.DecodeUint64(vector)
 					if check != value {
